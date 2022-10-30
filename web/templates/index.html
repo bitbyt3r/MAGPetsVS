@@ -1,0 +1,96 @@
+<html>
+  <head>
+    <style>
+      .gameview {
+        width: 1000px;
+        height: 500px;
+      }
+    </style>
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/autobahn/22.10.1/autobahn.min.js"></script>
+    <script>
+      var current_session = null;
+      var lcat, rcat;
+      var images = [];
+
+      function handleAttack(args) {
+        console.log("Handling attack", args);
+      }
+
+      function attack(target) {
+        console.log("Attacking");
+        if (current_session === null) {
+          return;
+        }
+        current_session.call('com.attack', [target]);
+        console.log(target);
+      }
+
+      function startgame(args) {
+        console.log("Starting new game");
+        [lcat, rcat, images] = args;
+        const assets = document.getElementById("assets");
+        const lcatel = document.getElementById("lcat");
+        const rcatel = document.getElementById("rcat");
+        console.log(lcatel, rcatel);
+        let existing = [];
+        for (var i=assets.children.length-1; i>=0; i--) {
+          if (Object.values(images).indexOf(assets.children[i].src) > -1) {
+            existing.push(assets.children[i].src);
+          } else {
+            assets.removeChild(assets.children[i]);
+          }
+        }
+        for (const [id, src] of Object.entries(images)) {
+          if (!(src in existing)) {
+            let el = document.createElement("img");
+            el.crossOrigin = "anonymous";
+            el.id = "IMG"+id;
+            el.src = src;
+            assets.appendChild(el);
+          }
+        }
+        console.log(lcat);
+        lcatel.setAttribute('src', "#IMG" + lcat.id);
+        rcatel.setAttribute('src', "#IMG" + rcat.id);
+        console.log("Done starting")
+      }
+
+      var connection = new autobahn.Connection({
+        url: "ws://127.0.0.1:8080/ws",
+        realm: "MAGPetsVS"
+      });
+
+      connection.onopen = async function (session, details) {
+        console.log("Connection opened");
+        current_session = session;
+        session.subscribe("com.attacks", handleAttack);
+        session.subscribe("com.gamestart", startgame);
+        session.call("com.getstate").then(startgame);
+      };
+
+      connection.onclose = function (reason, details) {
+        console.log("Connection closed");
+        current_session = null;
+      }
+
+      AFRAME.registerComponent('connect', {
+        init: function () {
+          connection.open();
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <a-scene embedded vr-mode-ui="enabled: false" class="gameview" connect>
+      <a-assets id="assets"></a-assets>
+      <a-image id="lcat" src="" width="16" height="9" position="-8.25 -3 0"></a-image>
+      <a-image id="rcat" src="" width="16" height="9" position="8.25 3 0"></a-image>
+      <a-camera look-controls-enabled="false" position="0 0 10"></a-camera>
+      <a-sky color="#000000" transparent="true" opacity="0"></a-sky>
+    </a-scene>
+    <div>
+      <button onclick="attack('Ivan')">Attack</button>
+    </div>
+  </body>
+</html>
