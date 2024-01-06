@@ -10,20 +10,48 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/autobahn/22.10.1/autobahn.min.js"></script>
     <script>
       var current_session = null;
+      var active = false;
       var lcat, rcat;
       var images = [];
 
-      function handleAttack(args) {
-        console.log("Handling attack", args);
+      function damage(args) {
+        [cat, health] = args;
+        if (cat == lcat.id) {
+          var target = lcat;
+          var el = document.getElementById("lcat");
+        } else {
+          var target = rcat;
+          var el = document.getElementById("rcat");
+        }
+        el.emit('damage1');
+        target.health = health;
+      }
+
+      function victory(args) {
+        active = false;
+        [winner] = args;
+        console.log(winner + " just won");
+        if (winner == lcat.id) {
+          var win_el = document.getElementById("lcat");
+          var lose_el = document.getElementById("rcat");
+        } else {
+          var win_el = document.getElementById("rcat");
+          var lose_el = document.getElementById("lcat");
+        }
+        win_el.emit('victory');
+        lose_el.emit('defeat');
       }
 
       function attack(target) {
-        console.log("Attacking");
-        if (current_session === null) {
+        console.log("Attacking " + target);
+        if (current_session === null || !active) {
           return;
         }
-        current_session.call('com.attack', [target]);
-        console.log(target);
+        if (target == "lcat") {
+          current_session.call('com.attack', [lcat.id]);
+        } else if (target == "rcat") {
+          current_session.call('com.attack', [rcat.id]);
+        }
       }
 
       function startgame(args) {
@@ -32,7 +60,8 @@
         const assets = document.getElementById("assets");
         const lcatel = document.getElementById("lcat");
         const rcatel = document.getElementById("rcat");
-        console.log(lcatel, rcatel);
+        const lcat_textel = document.getElementById("lcat-text");
+        const rcat_textel = document.getElementById("rcat-text");
         let existing = [];
         for (var i=assets.children.length-1; i>=0; i--) {
           if (Object.values(images).indexOf(assets.children[i].src) > -1) {
@@ -50,9 +79,15 @@
             assets.appendChild(el);
           }
         }
-        console.log(lcat);
         lcatel.setAttribute('src', "#IMG" + lcat.id);
         rcatel.setAttribute('src', "#IMG" + rcat.id);
+        lcat_textel.setAttribute("mixin", "text");
+        lcat_textel.setAttribute('text', 'value', lcat.name);
+        rcat_textel.setAttribute("mixin", "text");
+        rcat_textel.setAttribute('text', 'value', rcat.name);
+        lcatel.emit('begin');
+        rcatel.emit('begin');
+        active = true;
         console.log("Done starting")
       }
 
@@ -64,8 +99,9 @@
       connection.onopen = async function (session, details) {
         console.log("Connection opened");
         current_session = session;
-        session.subscribe("com.attacks", handleAttack);
+        session.subscribe("com.damage", damage);
         session.subscribe("com.gamestart", startgame);
+        session.subscribe("com.victory", victory);
         session.call("com.getstate").then(startgame);
       };
 
@@ -83,14 +119,51 @@
   </head>
   <body>
     <a-scene embedded vr-mode-ui="enabled: false" class="gameview" connect>
-      <a-assets id="assets"></a-assets>
-      <a-image id="lcat" src="" width="16" height="9" position="-8.25 -3 0"></a-image>
-      <a-image id="rcat" src="" width="16" height="9" position="8.25 3 0"></a-image>
-      <a-camera look-controls-enabled="false" position="0 0 10"></a-camera>
+      <a-assets id="assets" timeout="10000">
+      </a-assets>
+      <a-entity position="-8.25 -3 0">
+        <a-image id="lcat" src="" width="16" height="9" position="-18 0 0"
+          animation__1="property: rotation; from: 0 0 0; to: 0 0 3; dur: 60; delay:   0; dir: alternate; startEvents: damage1; autoplay: false; loop: 2; easing: easeInQuad;"
+          animation__2="property: rotation; from: 0 0 0; to: 0 0 -3; dur: 60; delay: 120; dir: alternate; startEvents: damage1; autoplay: false; loop: 2; easing: easeOutQuad;"
+
+          animation__3="property: position; from: 0 0 0; to: 0 -5 0; dur: 300; delay:   0; dir: normal; startEvents: defeat; autoplay: false; loop: 1; easing: easeInQuad;"
+          animation__4="property: opacity; from: 1;      to: 0;      dur: 300; delay:   0; dir: normal; startEvents: defeat; autoplay: false; loop: 1; easing: easeInQuad;"
+
+          animation__5="property: position; from: 0 0 0; to: 8.25 3 2; dur: 500; delay: 0; dir: normal; startEvents: victory; autoplay: false; loop: 1; easing: easeInOutQuad;"
+          animation__8="property: opacity; from: 1;      to: 0;      dur: 300; delay:   1000; dir: normal; startEvents: victory; autoplay: false; loop: 1; easing: easeInQuad;"
+          animation__9="property: position; from: 8.25 3 2; to: -18 0 0; dur: 1; delay: 1300; dir: normal; startEvents: victory; autoplay: false; loop: 1; easing: easeInOutQuad;"
+
+          animation__6="property: position; from: -9 0 0; to: 0 0 0; dur: 1000; delay: 1000; dir: normal; startEvents: begin; autoplay: false; loop: 1; easing: linear;"
+          animation__7="property: opacity; from: 0; to: 1; dur: 800; delay: 1000; dir: normal; startEvents: begin; autoplay: false; loop: 1; easing: linear;"
+        >
+          <a-entity id="lcat-text" position="0 -4 0" scale="16 20 0.1" text="align: left;"></a-entity>
+        </a-image>
+      </a-entity>
+      <a-entity position="8.25 3 0">
+        <a-image id="rcat" src="" width="16" height="9" position="18 0 0"
+          animation__1="property: rotation; from: 0 0 0; to: 0 0 3; dur: 60; delay:   0; dir: alternate; startEvents: damage1; autoplay: false; loop: 2; easing: easeInQuad;"
+          animation__2="property: rotation; from: 0 0 0; to: 0 0 -3; dur: 60; delay: 120; dir: alternate; startEvents: damage1; autoplay: false; loop: 2; easing: easeOutQuad;"
+
+          animation__3="property: position; from: 0 0 0; to: 0 -5 0; dur: 300; delay:   0; dir: normal; startEvents: defeat; autoplay: false; loop: 1; easing: easeInQuad;"
+          animation__4="property: opacity; from: 1;      to: 0;      dur: 300; delay:   0; dir: normal; startEvents: defeat; autoplay: false; loop: 1; easing: easeInQuad;"
+
+          animation__5="property: position; from: 0 0 0; to: -8.25 -3 2; dur: 500; delay: 0; dir: normal; startEvents: victory; autoplay: false; loop: 1; easing: easeInOutQuad;"
+          animation__8="property: opacity; from: 1;      to: 0;      dur: 300; delay:   1000; dir: normal; startEvents: victory; autoplay: false; loop: 1; easing: easeInQuad;"
+          animation__9="property: position; from: -8.25 -3 2; to: 18 0 0; dur: 1; delay: 1300; dir: normal; startEvents: victory; autoplay: false; loop: 1; easing: easeInOutQuad;"
+
+          animation__6="property: position; from: 9 0 0; to: 0 0 0; dur: 1000; delay: 0; dir: normal; startEvents: begin; autoplay: false; loop: 1; easing: linear;"
+          animation__7="property: opacity; from: 0; to: 1; dur: 800; delay: 0; dir: normal; startEvents: begin; autoplay: false; loop: 1; easing: linear;"
+        >
+          <a-entity id="rcat-text" position="0 4 0" scale="16 20 0.1" text="align: right;"></a-entity>
+        </a-image>
+      </a-entity>
+      <a-video src="https://magpets.s3.amazonaws.com/static/FinalFestination.mp4" crossorigin="anonymous" autoplay="false" width="16" height="9" position="0 0 -4" scale="3 3 1" material="transparent: false;" transparent="false"></a-video>
+      <a-camera camera="near: 5;" look-controls-enabled="false" position="0 0 10"></a-camera>
       <a-sky color="#000000" transparent="true" opacity="0"></a-sky>
     </a-scene>
     <div>
-      <button onclick="attack('Ivan')">Attack</button>
+      <button onclick="attack('lcat')">Left is Cuter</button>
+      <button onclick="attack('rcat')">Right is Cuter</button>
     </div>
   </body>
 </html>

@@ -1,8 +1,8 @@
 from autobahn.asyncio.wamp import ApplicationSession, ApplicationRunner
 from autobahn import wamp
 import logging
+import asyncio
 import redis
-import sys
 import os
 
 logger = logging.getLogger(__name__)
@@ -55,10 +55,14 @@ class GameServer(ApplicationSession):
                 logger.info(f"Ok, registered procedure with registration ID {res.id}")
             else:
                 logger.error(f"Failed to register handler: {res}")
-        cats = r.hrandfield("names", count=2)
+        self.startGame()
+
+    def startGame(self, cats=None):
+        if not cats:
+            cats = r.hrandfield("names", count=2)
         if len(cats) < 2:
-            logger.error(f"At least two cats must be loaded to start the game.")
-            sys.exit()
+            raise ValueError(f"At least two cats must be loaded to start the game.")
+        print(f"Starting game with cats: {cats}")
         names = r.hmget("names", *cats)
         images = r.hmget("urls", *cats)
         scores = r.zmscore("scores", cats)
@@ -77,14 +81,26 @@ class GameServer(ApplicationSession):
         logger.info("Getstate")
         return self.cats[0].dump(), self.cats[1].dump(), self.loaded_images
         
+    def updateScores(self, winner, loser):
+        print(f"{winner.name} defeated {loser.name}")
+        return
+
     @wamp.register('com.attack')
-    def vote(self, choice):
-        logger.info(f"Attacked {choice}")
-        if not choice in self.votes:
-            self.votes[choice] = 0
-        self.votes[choice] += 1
-        self.publish("com.attacks", choice)
-        return self.votes[choice]
+    async def vote(self, target):
+        for cat in self.cats:
+            if target == cat.id:
+                cat.health = max(cat.health - 25, 0)
+                self.publish('com.damage', cat.id, cat.health)
+                if cat.health == 0:
+                    loser = cat
+                    for winner in self.cats:
+                        if winner.id != cat.id:
+                            self.updateScores(winner, loser)
+                    self.publish('com.victory', cat.id)
+                    await asyncio.sleep(1.5)
+                    self.startGame(self.next_cats)
+                    break
+
 
 if __name__ == '__main__':
     url = os.environ.get("AUTOBAHN_ROUTER", "ws://127.0.0.1:8080/ws")
