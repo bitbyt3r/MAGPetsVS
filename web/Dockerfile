@@ -1,5 +1,5 @@
 FROM python:alpine
-
+RUN apk update && apk add python3-dev gcc libc-dev musl-dev libffi-dev
 RUN pip install --upgrade flask redis requests boto3 gunicorn slack_bolt Pillow
 
 ADD templates/ templates/

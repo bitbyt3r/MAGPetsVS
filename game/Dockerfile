@@ -1,5 +1,6 @@
 FROM python:alpine
 
+RUN apk update && apk add python3-dev gcc libc-dev musl-dev libffi-dev
 RUN pip install --upgrade redis autobahn
 
 ADD game.py game.py
