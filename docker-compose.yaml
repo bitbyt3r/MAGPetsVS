@@ -9,7 +9,7 @@ services:
   web:
     ports:
       - 80:80
-    image: ghcr.io/bitbyt3r/magpetsvs-web:latest
+    image: ghcr.io/bitbyt3r/magpetsvs-web:main
     depends_on:
       - redis
     env_file:
@@ -17,7 +17,7 @@ services:
     restart: always
 
   game:
-    image: ghcr.io/bitbyt3r/magpetsvs-game:latest
+    image: ghcr.io/bitbyt3r/magpetsvs-game:main
     depends_on:
       - redis
       - crossbar
@@ -28,7 +28,7 @@ services:
   crossbar:
     ports:
       - 8080:8080
-    image: ghcr.io/bitbyt3r/magpetsvs-crossbar:latest
+    image: ghcr.io/bitbyt3r/magpetsvs-crossbar:main
     restart: always
 
   watchtower:
