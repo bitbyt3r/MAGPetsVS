@@ -23,6 +23,8 @@ s3_bucket = os.environ.get("AWS_S3_BUCKET", "")
 s3_client = boto3.client('s3')
 s3 = boto3.resource('s3')
 
+crossbar_url = os.environ.get("CROSSBAR_URL")
+
 app = App()
 handler = SocketModeHandler(app)
 
@@ -105,7 +107,7 @@ def slack_events():
 
 @flask_app.route('/')
 def root():
-    return render_template('index.html')
+    return render_template('index.html', crossbar_url=crossbar_url)
 
 @flask_app.route('/upload', methods=['POST'])
 def upload():
