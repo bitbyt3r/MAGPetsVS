@@ -25,18 +25,18 @@ jobs:
         with:
           context: "game"
           push: true
-          tags: ghcr.io/${{ github.repository }}-game:${{ github.ref_name }}
+          tags: ghcr.io/bitbyt3r/magpetsvs-game:${{ github.ref_name }}
       
       - name: Build and Push Web Image
         uses: docker/build-push-action@v2
         with:
           context: "web"
           push: true
-          tags: ghcr.io/${{ github.repository }}-web:${{ github.ref_name }}
+          tags: ghcr.io/bitbyt3r/magpetsvs-web:${{ github.ref_name }}
       
       - name: Build and Push Crossbar Image
         uses: docker/build-push-action@v2
         with:
           context: "crossbar"
           push: true
-          tags: ghcr.io/${{ github.repository }}-crossbar:${{ github.ref_name }}
+          tags: ghcr.io/bitbyt3r/magpetsvs-crossbar:${{ github.ref_name }}
