@@ -7,7 +7,6 @@ services:
     restart: always
 
   web:
-    build: web
     ports:
       - 80:80
     image: ghcr.io/bitbyt3r/magpetsvs-web:latest
@@ -18,7 +17,6 @@ services:
     restart: always
 
   game:
-    build: game
     image: ghcr.io/bitbyt3r/magpetsvs-game:latest
     depends_on:
       - redis
@@ -28,7 +26,6 @@ services:
     restart: always
 
   crossbar:
-    build: crossbar
     ports:
       - 8080:8080
     image: ghcr.io/bitbyt3r/magpetsvs-crossbar:latest
